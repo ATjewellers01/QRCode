@@ -92,8 +92,75 @@ END:VCARD`.trim()
     }
   }
 
+  const loadImageAsDataURL = (imgId: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = document.getElementById(imgId) as HTMLImageElement
+      if (!img) {
+        console.error(`Image with id ${imgId} not found`)
+        reject(new Error(`Image with id ${imgId} not found`))
+        return
+      }
+
+      // Check if image is already loaded
+      if (img.complete && img.naturalWidth > 0) {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth || img.width
+        canvas.height = img.naturalHeight || img.height
+        const ctx = canvas.getContext('2d')
+        
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'))
+          return
+        }
+
+        ctx.drawImage(img, 0, 0)
+        
+        try {
+          const dataURL = canvas.toDataURL('image/png')
+          console.log(`${imgId} converted to data URL successfully`)
+          resolve(dataURL)
+        } catch (error) {
+          console.error(`Error converting ${imgId}:`, error)
+          reject(error)
+        }
+      } else {
+        // Wait for image to load
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = img.naturalWidth || img.width
+          canvas.height = img.naturalHeight || img.height
+          const ctx = canvas.getContext('2d')
+          
+          if (!ctx) {
+            reject(new Error('Failed to get canvas context'))
+            return
+          }
+
+          ctx.drawImage(img, 0, 0)
+          
+          try {
+            const dataURL = canvas.toDataURL('image/png')
+            console.log(`${imgId} converted to data URL successfully`)
+            resolve(dataURL)
+          } catch (error) {
+            console.error(`Error converting ${imgId}:`, error)
+            reject(error)
+          }
+        }
+        
+        img.onerror = () => {
+          console.error(`Failed to load image: ${imgId}`)
+          reject(new Error(`Failed to load image: ${imgId}`))
+        }
+      }
+    })
+  }
+
  const downloadContactPDF = async () => {
   try {
+    // Small delay to ensure images are loaded
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
     const pdf = new jsPDF("p", "mm", "a4")
     const pageWidth = pdf.internal.pageSize.getWidth()
     const pageHeight = pdf.internal.pageSize.getHeight()
@@ -102,7 +169,26 @@ END:VCARD`.trim()
     pdf.setFillColor(255, 255, 255)
     pdf.rect(0, 0, pageWidth, pageHeight, "F")
 
-    // Generate and add Contact QR Code - Centered
+    // Add JF Logo at the top center
+    try {
+      console.log("Loading JF Logo...")
+      const jfLogoDataURL = await loadImageAsDataURL('jf-logo')
+      console.log("JF Logo loaded, adding to PDF...")
+      
+      // JF Logo positioning - top center
+      const logoWidth = 50
+      const logoHeight = 35
+      const logoX = (pageWidth - logoWidth) / 2
+      const logoY = 40
+      
+      pdf.addImage(jfLogoDataURL, "PNG", logoX, logoY, logoWidth, logoHeight)
+      console.log("JF Logo added to PDF successfully")
+    } catch (error) {
+      console.error("JF Logo error:", error)
+      alert("Warning: JF Logo could not be loaded. PDF will be generated without the logo.")
+    }
+
+    // Generate and add Contact QR Code - Centered below logo
     try {
       console.log("Generating contact QR code...")
       const vCardData = generateVCard(contactInfo)
@@ -111,20 +197,20 @@ END:VCARD`.trim()
           dark: "#000000",
           light: "#FFFFFF",
         },
-        width: 400,
+        width: 500,
       })
 
-      // Center the QR code higher on the page
-      const qrSize = 80
+      // Center the QR code below the logo
+      const qrSize = 100
       const qrX = (pageWidth - qrSize) / 2
-      const qrY = (pageHeight - qrSize) / 2 - 20 // Move QR code up to make space for text
+      const qrY = 95 // Position below logo
 
       pdf.addImage(contactQRDataURL, "PNG", qrX, qrY, qrSize, qrSize)
 
       // Add "Save Us" text below QR code
-      const textY = qrY + qrSize + 15 // Position text below QR code
+      const textY = qrY + qrSize + 20
       pdf.setTextColor(0, 0, 0)
-      pdf.setFontSize(20)
+      pdf.setFontSize(24)
       pdf.setFont("helvetica", "bold")
       
       // Add the text
@@ -132,31 +218,31 @@ END:VCARD`.trim()
       
       // Add underline manually
       const textWidth = pdf.getTextWidth("Save Us")
-      const underlineY = textY + 2 // Position underline slightly below text
+      const underlineY = textY + 2
       const underlineStartX = (pageWidth - textWidth) / 2
       const underlineEndX = (pageWidth + textWidth) / 2
       
-      pdf.setLineWidth(0.5)
+      pdf.setLineWidth(0.8)
       pdf.line(underlineStartX, underlineY, underlineEndX, underlineY)
 
       console.log("Contact QR code added successfully")
     } catch (error) {
       console.error("Contact QR code generation failed:", error)
       // Fallback design
-      const qrSize = 80
+      const qrSize = 100
       const qrX = (pageWidth - qrSize) / 2
-      const qrY = (pageHeight - qrSize) / 2 - 20
+      const qrY = 95
       
       pdf.setFillColor(200, 200, 200)
       pdf.rect(qrX, qrY, qrSize, qrSize, "F")
       pdf.setTextColor(0, 0, 0)
-      pdf.setFontSize(16)
+      pdf.setFontSize(18)
       pdf.setFont("helvetica", "bold")
       pdf.text("QR CODE", pageWidth / 2, qrY + qrSize/2, { align: "center" })
       
       // Add "Save Us" text even in fallback
-      const textY = qrY + qrSize + 15
-      pdf.setFontSize(20)
+      const textY = qrY + qrSize + 20
+      pdf.setFontSize(24)
       pdf.text("Save Us", pageWidth / 2, textY, { align: "center" })
       
       // Add underline for fallback too
@@ -165,7 +251,7 @@ END:VCARD`.trim()
       const underlineStartX = (pageWidth - textWidth) / 2
       const underlineEndX = (pageWidth + textWidth) / 2
       
-      pdf.setLineWidth(0.5)
+      pdf.setLineWidth(0.8)
       pdf.line(underlineStartX, underlineY, underlineEndX, underlineY)
     }
 
@@ -287,6 +373,17 @@ END:VCARD`.trim()
         height={64}
         className="hidden"
         crossOrigin="anonymous"
+      />
+      <img
+        id="jf-logo"
+        src="/images/JF Logo.png"
+        alt="JF Logo"
+        width={120}
+        height={60}
+        className="hidden"
+        crossOrigin="anonymous"
+        onLoad={() => console.log("JF Logo loaded successfully")}
+        onError={(e) => console.error("JF Logo failed to load:", e)}
       />
 
       <div className="max-w-5xl mx-auto">
@@ -508,7 +605,7 @@ END:VCARD`.trim()
             </div>
 
             {/* Download Section for Feedback */}
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-4 sm:space-y-5">
               <Button
                 onClick={downloadFeedbackPDF}
                 className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-800 hover:from-green-700 hover:to-emerald-900 text-white font-bold py-3 sm:py-4 px-8 sm:px-12 rounded-xl sm:rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-300 text-base sm:text-lg"
