@@ -169,7 +169,26 @@ END:VCARD`.trim()
     pdf.setFillColor(255, 255, 255)
     pdf.rect(0, 0, pageWidth, pageHeight, "F")
 
-    // Generate and add Contact QR Code - Centered
+    // Add JF Logo at the top center
+    try {
+      console.log("Loading JF Logo...")
+      const jfLogoDataURL = await loadImageAsDataURL('jf-logo')
+      console.log("JF Logo loaded, adding to PDF...")
+      
+      // JF Logo positioning - top center
+      const logoWidth = 50
+      const logoHeight = 35
+      const logoX = (pageWidth - logoWidth) / 2
+      const logoY = 40
+      
+      pdf.addImage(jfLogoDataURL, "PNG", logoX, logoY, logoWidth, logoHeight)
+      console.log("JF Logo added to PDF successfully")
+    } catch (error) {
+      console.error("JF Logo error:", error)
+      alert("Warning: JF Logo could not be loaded. PDF will be generated without the logo.")
+    }
+
+    // Generate and add Contact QR Code - Centered below logo
     try {
       console.log("Generating contact QR code...")
       const vCardData = generateVCard(contactInfo)
@@ -181,34 +200,12 @@ END:VCARD`.trim()
         width: 500,
       })
 
-      // Center the QR code
+      // Center the QR code below the logo
       const qrSize = 100
       const qrX = (pageWidth - qrSize) / 2
-      const qrY = 80
+      const qrY = 95 // Position below logo
 
       pdf.addImage(contactQRDataURL, "PNG", qrX, qrY, qrSize, qrSize)
-
-      // Add JF Logo in the center of the QR code
-      try {
-        console.log("Loading JF Logo...")
-        const jfLogoDataURL = await loadImageAsDataURL('jf-logo')
-        console.log("JF Logo loaded, adding to QR code center...")
-        
-        // JF Logo positioning - center of QR code with white background
-        const logoSize = 20
-        const logoX = qrX + (qrSize - logoSize) / 2
-        const logoY = qrY + (qrSize - logoSize) / 2
-        
-        // Add white background circle behind logo
-        pdf.setFillColor(255, 255, 255)
-        pdf.circle(logoX + logoSize/2, logoY + logoSize/2, logoSize/2 + 2, "F")
-        
-        pdf.addImage(jfLogoDataURL, "PNG", logoX, logoY, logoSize, logoSize)
-        console.log("JF Logo added to QR code center successfully")
-      } catch (error) {
-        console.error("JF Logo error:", error)
-        console.log("QR code will be generated without logo overlay")
-      }
 
       // Add "Save Us" text below QR code
       const textY = qrY + qrSize + 20
@@ -234,7 +231,7 @@ END:VCARD`.trim()
       // Fallback design
       const qrSize = 100
       const qrX = (pageWidth - qrSize) / 2
-      const qrY = 80
+      const qrY = 95
       
       pdf.setFillColor(200, 200, 200)
       pdf.rect(qrX, qrY, qrSize, qrSize, "F")
