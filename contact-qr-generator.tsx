@@ -49,7 +49,7 @@ export default function ContactQRGenerator() {
     phone: "+91 9977447111",
     email: "akshay@atjewels.in",
     address:
-      "AT Jewellers, Kotwali Chowk, Sadar Bazar Road, Raipur, Chhattisgarh — 492001",
+      "AT Plus jewellers , Sadar Bazar , o/P Girdhar Bhawan , Raipur ,Chhattisgarh 492001",
     website: "",
   }
 
@@ -156,7 +156,7 @@ END:VCARD`.trim()
     })
   }
 
- const downloadContactPDF = async () => {
+const downloadContactPDF = async () => {
   try {
     // Small delay to ensure images are loaded
     await new Promise(resolve => setTimeout(resolve, 100))
@@ -195,13 +195,13 @@ END:VCARD`.trim()
         console.log("JF Logo loaded, adding to QR code center...")
         
         // JF Logo positioning - center of QR code with white background
-        const logoSize = 20
+        const logoSize = 28
         const logoX = qrX + (qrSize - logoSize) / 2
         const logoY = qrY + (qrSize - logoSize) / 2
         
-        // Add white background circle behind logo
+        // Add white background circle behind logo (smaller circle)
         pdf.setFillColor(255, 255, 255)
-        pdf.circle(logoX + logoSize/2, logoY + logoSize/2, logoSize/2 + 2, "F")
+        pdf.circle(logoX + logoSize/2, logoY + logoSize/2, logoSize/2 + 1, "F")
         
         pdf.addImage(jfLogoDataURL, "PNG", logoX, logoY, logoSize, logoSize)
         console.log("JF Logo added to QR code center successfully")
